@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Réservation — Le Châtelet</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ================= NAV ================= -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <span class="nav-brand-mark">C</span>
+        <span class="nav-brand-name">Le Châtelet</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html" class="nav-link">Accueil</a>
+        <a href="index.html#chalets" class="nav-link">Les Chalets</a>
+        <a href="reservation.html" class="nav-link nav-cta">Réserver</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ================= PAGE HEADER ================= -->
+  <header class="page-header">
+    <div class="container">
+      <span class="overline">Calendrier & Réservation</span>
+      <h1 style="margin-top: 1rem;">Planifier un séjour</h1>
+      <p class="lead">Choisissez vos dates, vérifiez la disponibilité des deux chalets, et envoyez votre demande.</p>
+    </div>
+  </header>
+
+  <!-- ================= AUTH (family password) ================= -->
+  <section id="auth-section" class="booking-section">
+    <div class="auth-panel">
+      <div class="lock-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0110 0v4"/>
+        </svg>
+      </div>
+      <h2>Accès famille</h2>
+      <p>Entrez le mot de passe famille pour accéder au calendrier.</p>
+      <form id="family-auth-form">
+        <div class="field">
+          <label for="family-password">Mot de passe</label>
+          <input type="password" id="family-password" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Accéder</button>
+        <div id="family-auth-msg"></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ================= MAIN APP (hidden until auth) ================= -->
+  <section id="app-section" class="booking-section hidden">
+
+    <!-- USER BAR -->
+    <div class="user-bar">
+      <div class="user-info" id="user-info">
+        <span id="user-greet">Connecté</span>
+        <span id="admin-indicator" class="admin-badge hidden">Admin</span>
+      </div>
+      <div style="display:flex; gap: 0.5rem;">
+        <button id="admin-login-btn" class="btn btn-ghost btn-sm">Mode admin</button>
+        <button id="logout-btn" class="btn btn-secondary btn-sm">Déconnexion</button>
+      </div>
+    </div>
+
+    <!-- BOOKING FORM -->
+    <div class="panel">
+      <h2>Nouvelle réservation</h2>
+      <p class="panel-sub">Remplissez le formulaire — votre demande sera envoyée pour approbation.</p>
+
+      <form id="booking-form">
+        <div class="field-row">
+          <div class="field">
+            <label for="user-name">Votre nom</label>
+            <input type="text" id="user-name" required />
+          </div>
+          <div class="field">
+            <label for="user-email">Email de confirmation</label>
+            <input type="email" id="user-email" required />
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="start-date">Date d'arrivée</label>
+            <input type="date" id="start-date" required />
+          </div>
+          <div class="field">
+            <label for="end-date">Date de départ</label>
+            <input type="date" id="end-date" required />
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="num-people">Nombre de personnes</label>
+            <input type="number" id="num-people" min="1" max="16" required />
+          </div>
+          <div class="field">
+            <label for="user-phone">Téléphone <span style="color: var(--muted); font-weight: 400;">(optionnel)</span></label>
+            <input type="tel" id="user-phone" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Chalet(s) — cochez un ou les deux</label>
+          <div class="checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="petit-chalet" />
+              <span><strong>Petit Châtelet</strong> — 4 personnes, 2 chambres</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="grand-chalet" />
+              <span><strong>Grand Châtelet</strong> — 12 personnes, 5 chambres</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Grand chalet options -->
+        <div id="grand-options" class="field hidden">
+          <label>Options Grand Châtelet</label>
+          <div class="checkbox-group">
+            <label class="radio-label">
+              <input type="radio" name="grand-type" value="entier" checked />
+              <span>Chalet entier</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="grand-type" value="chambres" />
+              <span>Chambres seulement</span>
+            </label>
+          </div>
+          <div id="chambres-field" class="field hidden" style="margin-top: 1rem;">
+            <label for="chambres">Précisez les chambres</label>
+            <input type="text" id="chambres" placeholder="Ex : Chambres 1, 2 et 4" />
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap;">
+          <button type="submit" class="btn btn-primary" id="submit-booking-btn">Envoyer la demande</button>
+          <button type="reset" class="btn btn-secondary">Effacer</button>
+        </div>
+        <div id="booking-msg"></div>
+      </form>
+    </div>
+
+    <!-- CALENDARS -->
+    <div class="calendars-grid">
+      <!-- PETIT -->
+      <div class="calendar-card">
+        <div class="calendar-header">
+          <h3>Petit Châtelet</h3>
+          <div class="calendar-nav">
+            <button data-nav="prev" data-cal="petit" aria-label="Mois précédent">‹</button>
+            <span class="calendar-month" id="petit-month-label">—</span>
+            <button data-nav="next" data-cal="petit" aria-label="Mois suivant">›</button>
+          </div>
+        </div>
+        <div class="calendar-grid">
+          <div class="calendar-weekdays">
+            <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
+          </div>
+          <div class="calendar-days" id="petit-days"></div>
+        </div>
+        <div class="calendar-legend">
+          <span class="legend-swatch">Approuvée</span>
+          <span class="legend-swatch pending">En attente</span>
+          <span class="legend-swatch today">Aujourd'hui</span>
+        </div>
+      </div>
+
+      <!-- GRAND -->
+      <div class="calendar-card">
+        <div class="calendar-header">
+          <h3>Grand Châtelet</h3>
+          <div class="calendar-nav">
+            <button data-nav="prev" data-cal="grand" aria-label="Mois précédent">‹</button>
+            <span class="calendar-month" id="grand-month-label">—</span>
+            <button data-nav="next" data-cal="grand" aria-label="Mois suivant">›</button>
+          </div>
+        </div>
+        <div class="calendar-grid">
+          <div class="calendar-weekdays">
+            <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
+          </div>
+          <div class="calendar-days" id="grand-days"></div>
+        </div>
+        <div class="calendar-legend">
+          <span class="legend-swatch">Approuvée</span>
+          <span class="legend-swatch pending">En attente</span>
+          <span class="legend-swatch today">Aujourd'hui</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MES RESERVATIONS -->
+    <div class="panel">
+      <h2>Mes réservations</h2>
+      <p class="panel-sub">Les demandes que vous avez envoyées — vous pouvez les annuler à tout moment.</p>
+      <div id="my-reservations-container">
+        <div class="loading">Chargement</div>
+      </div>
+    </div>
+
+    <!-- TOUTES LES DEMANDES -->
+    <div class="panel">
+      <h2>Toutes les demandes</h2>
+      <p class="panel-sub">Vue d'ensemble des réservations. Les admins peuvent approuver, refuser ou effacer.</p>
+      <div id="all-reservations-container">
+        <div class="loading">Chargement</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ADMIN PASSWORD MODAL ================= -->
+  <div id="admin-modal" class="hidden" style="position:fixed; inset:0; background:rgba(47,62,70,0.6); backdrop-filter:blur(4px); z-index:200; display:none; align-items:center; justify-content:center; padding:1rem;">
+    <div class="auth-panel" style="margin:0; max-width: 420px;">
+      <div class="lock-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 15v2m-6 4h12a2 2 0 002-2v-7a2 2 0 00-2-2H6a2 2 0 00-2 2v7a2 2 0 002 2z"/>
+          <path d="M8 11V7a4 4 0 118 0v4"/>
+        </svg>
+      </div>
+      <h2>Mode administrateur</h2>
+      <p>Entrez le mot de passe admin pour gérer les réservations.</p>
+      <form id="admin-auth-form">
+        <div class="field">
+          <label for="admin-password">Mot de passe admin</label>
+          <input type="password" id="admin-password" required />
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+          <button type="submit" class="btn btn-primary" style="flex:1;">Activer</button>
+          <button type="button" id="admin-modal-cancel" class="btn btn-secondary">Annuler</button>
+        </div>
+        <div id="admin-auth-msg"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div>
+        <h4>Le Châtelet</h4>
+        <p>Chalets familiaux.</p>
+      </div>
+      <div>
+        <h4>Navigation</h4>
+        <p>
+          <a href="index.html">Accueil</a><br>
+          <a href="reservation.html">Réserver</a>
+        </p>
+      </div>
+      <div>
+        <h4>Besoin d'aide ?</h4>
+        <p>Contactez l'administrateur de la famille pour toute question.</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      © <span id="year"></span> Le Châtelet
+    </div>
+  </footer>
+
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+  <script src="app.js"></script>
+</body>
+</html>
