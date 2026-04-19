@@ -668,6 +668,347 @@ h1, h2, h3, h4 {
 }
 
 /* ==========================================================================
+   RANDO & SKI PAGE
+   ========================================================================== */
+
+/* Hike cards — list style */
+.hikes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.hike-card {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--stone-pale);
+  text-decoration: none;
+  color: inherit;
+  transition: all var(--transition);
+}
+
+.hike-card:hover {
+  transform: translateX(4px);
+  border-color: var(--earth);
+  box-shadow: var(--shadow-md);
+}
+
+.hike-card-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: var(--stone-pale);
+  border-radius: 50%;
+  color: var(--earth);
+  font-size: 1.25rem;
+}
+
+.hike-card-content {
+  flex: 1;
+}
+
+.hike-card-content h4 {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
+  color: var(--slate-dark);
+}
+
+.hike-card-content p {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.hike-card-arrow {
+  color: var(--muted);
+  font-size: 1.5rem;
+  transition: all var(--transition);
+}
+
+.hike-card:hover .hike-card-arrow {
+  color: var(--earth);
+  transform: translateX(4px);
+}
+
+/* Refuges — two big cards */
+.refuges-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.refuge-card {
+  padding: 2rem;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border-top: 4px solid var(--earth);
+}
+
+.refuge-card h4 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.refuge-card .refuge-altitude {
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  background: var(--stone-pale);
+  color: var(--earth-dark);
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+
+.refuge-card p {
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 1rem;
+}
+
+/* Ski stations grid */
+.ski-stations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.ski-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.75rem;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  color: inherit;
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.ski-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--slate-dark), var(--earth));
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.ski-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.ski-card:hover::before {
+  opacity: 1;
+}
+
+.ski-card-mountain {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 1rem;
+  color: var(--slate-dark);
+  opacity: 0.4;
+}
+
+.ski-card-mountain svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ski-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.ski-card .ski-card-meta {
+  font-size: 0.8rem;
+  color: var(--earth);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.85rem;
+  font-weight: 500;
+}
+
+.ski-card p {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+  flex: 1;
+}
+
+.ski-card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--slate-dark);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* Disclaimer / safety box */
+.safety-box {
+  background: var(--status-pending-bg);
+  border-left: 4px solid var(--status-pending);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.75rem;
+  margin-top: 2rem;
+}
+
+.safety-box h4 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: #6f5724;
+  font-family: var(--font-body);
+  font-weight: 600;
+}
+
+.safety-box ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #6f5724;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.safety-box li {
+  margin-bottom: 0.4rem;
+}
+
+/* External link button */
+.external-link-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, var(--slate-dark), var(--earth-dark));
+  color: var(--cream);
+  border-radius: var(--radius-lg);
+  margin-top: 2rem;
+}
+
+.external-link-banner h4 {
+  color: var(--cream);
+  font-size: 1.15rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.external-link-banner p {
+  color: var(--stone-light);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.external-link-banner .btn-primary {
+  background: var(--cream);
+  color: var(--slate-dark);
+}
+
+.external-link-banner .btn-primary:hover {
+  background: var(--white);
+}
+
+/* Section intro paragraph */
+.section-intro {
+  max-width: 720px;
+  color: var(--muted);
+  font-size: 1.02rem;
+  line-height: 1.7;
+  margin-bottom: 0.5rem;
+}
+
+/* ==========================================================================
+   ALTERNATING PHOTO-TEXT BLOCKS (home page)
+   ========================================================================== */
+.alt-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.alt-block {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  min-height: 70vh;
+}
+
+.alt-block:nth-child(even) {
+  direction: rtl; /* swap order */
+}
+
+.alt-block:nth-child(even) > * {
+  direction: ltr; /* but keep content readable */
+}
+
+.alt-block-image {
+  background-size: cover;
+  background-position: center;
+  height: 100%;
+  min-height: 70vh;
+  position: relative;
+}
+
+.alt-block-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 60%, rgba(47, 62, 70, 0.05));
+}
+
+.alt-block-text {
+  padding: 4rem 4rem;
+  background: var(--cream);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.alt-block:nth-child(even) .alt-block-text {
+  background: var(--stone-pale);
+}
+
+.alt-block-text .overline {
+  margin-bottom: 1rem;
+}
+
+.alt-block-text h2 {
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  margin-bottom: 1.25rem;
+  line-height: 1.15;
+}
+
+.alt-block-text p {
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.8;
+  margin-bottom: 1rem;
+}
+
+.alt-block-text p:last-child { margin-bottom: 0; }
+
+/* ==========================================================================
    FEATURES GRID (home page)
    ========================================================================== */
 .features-section {
@@ -791,6 +1132,10 @@ h1, h2, h3, h4 {
   overflow: hidden;
 }
 
+.info-card-wide {
+  grid-column: 1 / -1;
+}
+
 .info-card-header {
   display: flex;
   align-items: center;
@@ -873,7 +1218,7 @@ h1, h2, h3, h4 {
 /* Emergency numbers grid */
 .emergency-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
   margin-top: 1rem;
 }
@@ -1506,10 +1851,27 @@ h1, h2, h3, h4 {
   /* New components responsive */
   .features-grid { grid-template-columns: 1fr 1fr; }
   .info-grid { grid-template-columns: 1fr; }
+  .info-card-wide { grid-column: auto; }
   .emergency-grid { grid-template-columns: 1fr; }
   .steps-grid { grid-template-columns: 1fr; gap: 2rem; }
   .pdf-panel { flex-direction: column; text-align: center; padding: 2rem 1.5rem; }
   .pdf-panel-icon { width: 60px; height: 60px; margin: 0 auto; }
+
+  /* Alt blocks stack on mobile, image always on top */
+  .alt-block,
+  .alt-block:nth-child(even) {
+    grid-template-columns: 1fr;
+    direction: ltr;
+    min-height: auto;
+  }
+  .alt-block-image { min-height: 50vh; }
+  .alt-block-text { padding: 2.5rem 1.5rem; }
+
+  /* Rando & Ski responsive */
+  .refuges-grid { grid-template-columns: 1fr; }
+  .ski-stations-grid { grid-template-columns: 1fr; }
+  .hike-card { flex-wrap: wrap; }
+  .external-link-banner { flex-direction: column; text-align: center; }
 }
 
 @media (max-width: 560px) {
