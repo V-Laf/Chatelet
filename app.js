@@ -15,7 +15,7 @@
         (Voir instructions de déploiement en fin de Code.gs)
    ----------------------------------------------------------------------------- */
 const CONFIG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyxUD0_I1_hYs4YF6NDmcJnCoFOVwnvCi2-pOlq_T4fSdQO1KaiPfAy4Yg7GR5zVy8/exec',
+  SCRIPT_URL: 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec',
   FAMILY_PASSWORD: 'BecRouge',
   ADMIN_PASSWORD: 'Tempete',
   STORAGE_KEY_USER: 'chatelet_user',
