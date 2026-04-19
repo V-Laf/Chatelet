@@ -671,6 +671,107 @@ h1, h2, h3, h4 {
    RANDO & SKI PAGE
    ========================================================================== */
 
+/* Seasonal panel — full-width section with photo background */
+.seasonal-panel {
+  position: relative;
+  padding: 5rem 0;
+  overflow: hidden;
+  margin-bottom: 3rem;
+}
+
+.seasonal-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+
+.seasonal-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.seasonal-panel.summer::before {
+  background-image: url('images/peaks-summer.jpg');
+}
+
+.seasonal-panel.summer::after {
+  background: linear-gradient(135deg,
+    rgba(250, 247, 244, 0.92) 0%,
+    rgba(250, 247, 244, 0.75) 60%,
+    rgba(250, 247, 244, 0.45) 100%
+  );
+}
+
+.seasonal-panel.winter::before {
+  background-image: url('images/peaks-winter.jpg');
+}
+
+.seasonal-panel.winter::after {
+  background: linear-gradient(135deg,
+    rgba(47, 62, 70, 0.85) 0%,
+    rgba(47, 62, 70, 0.7) 60%,
+    rgba(47, 62, 70, 0.45) 100%
+  );
+}
+
+.seasonal-panel-content {
+  position: relative;
+  z-index: 2;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.seasonal-panel-content > .panel {
+  margin-bottom: 0;
+}
+
+/* Winter panel — invert text colors on its inner panel for contrast over dark bg */
+.seasonal-panel.winter .seasonal-panel-header {
+  color: var(--cream);
+}
+
+.seasonal-panel-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.seasonal-panel-header .overline {
+  color: var(--earth);
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.seasonal-panel.winter .seasonal-panel-header .overline {
+  color: var(--stone-light);
+}
+
+.seasonal-panel-header h2 {
+  font-size: clamp(2.25rem, 5vw, 3.25rem);
+  margin-bottom: 0.75rem;
+}
+
+.seasonal-panel.winter .seasonal-panel-header h2 {
+  color: var(--cream);
+}
+
+.seasonal-panel-header p {
+  color: var(--muted);
+  max-width: 600px;
+  margin: 0 auto;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.seasonal-panel.winter .seasonal-panel-header p {
+  color: var(--stone-light);
+}
+
 /* Hike cards — list style */
 .hikes-list {
   display: flex;
@@ -939,7 +1040,150 @@ h1, h2, h3, h4 {
 }
 
 /* ==========================================================================
-   ALTERNATING PHOTO-TEXT BLOCKS (home page)
+   FULL-WIDTH SLIDESHOW (home page)
+   ========================================================================== */
+.slideshow {
+  position: relative;
+  width: 100%;
+  height: 80vh;
+  min-height: 500px;
+  max-height: 800px;
+  overflow: hidden;
+  background: var(--slate-dark);
+}
+
+.slideshow-track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 1500ms ease-in-out;
+}
+
+.slide.active {
+  opacity: 1;
+}
+
+.slide::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom,
+    rgba(31, 26, 23, 0.1) 0%,
+    rgba(31, 26, 23, 0) 30%,
+    rgba(31, 26, 23, 0) 50%,
+    rgba(31, 26, 23, 0.55) 100%
+  );
+}
+
+.slide-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4rem 3rem 5rem;
+  z-index: 2;
+  color: var(--cream);
+  max-width: 720px;
+}
+
+.slide-caption .overline {
+  color: var(--stone-light);
+  display: block;
+  margin-bottom: 0.75rem;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 800ms ease-out 600ms, transform 800ms ease-out 600ms;
+}
+
+.slide-caption h2 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  color: var(--cream);
+  font-weight: 500;
+  line-height: 1.1;
+  margin: 0;
+  opacity: 0;
+  transform: translateY(15px);
+  transition: opacity 900ms ease-out 700ms, transform 900ms ease-out 700ms;
+}
+
+.slide.active .slide-caption .overline,
+.slide.active .slide-caption h2 {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Slideshow controls */
+.slideshow-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  background: rgba(31, 26, 23, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--cream);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 1.5rem;
+  font-family: var(--font-display);
+  transition: all var(--transition);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.slideshow-nav:hover {
+  background: rgba(31, 26, 23, 0.5);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.slideshow-nav.prev { left: 1.5rem; }
+.slideshow-nav.next { right: 1.5rem; }
+
+/* Pagination dots */
+.slideshow-dots {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.slideshow-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition);
+  padding: 0;
+}
+
+.slideshow-dot:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.slideshow-dot.active {
+  background: var(--cream);
+  width: 24px;
+  border-radius: 4px;
+}
+
+/* ==========================================================================
+   ALTERNATING PHOTO-TEXT BLOCKS (legacy — unused on home now)
    ========================================================================== */
 .alt-blocks {
   display: flex;
@@ -1857,7 +2101,14 @@ h1, h2, h3, h4 {
   .pdf-panel { flex-direction: column; text-align: center; padding: 2rem 1.5rem; }
   .pdf-panel-icon { width: 60px; height: 60px; margin: 0 auto; }
 
-  /* Alt blocks stack on mobile, image always on top */
+  /* Slideshow responsive */
+  .slideshow { height: 60vh; min-height: 380px; }
+  .slide-caption { padding: 2rem 1.5rem 3.5rem; }
+  .slideshow-nav { width: 40px; height: 40px; }
+  .slideshow-nav.prev { left: 0.75rem; }
+  .slideshow-nav.next { right: 0.75rem; }
+
+  /* Alt blocks stack on mobile (kept in case used elsewhere) */
   .alt-block,
   .alt-block:nth-child(even) {
     grid-template-columns: 1fr;

@@ -41,76 +41,51 @@
     </div>
   </header>
 
-  <!-- ================= ALTERNATING BLOCKS (photos) ================= -->
-  <section id="about" class="alt-blocks">
+  <!-- ================= SLIDESHOW ================= -->
+  <section id="about" class="slideshow" aria-label="Photos du chalet et des environs">
+    <div class="slideshow-track" id="slideshow-track">
 
-    <!-- Block 1 — text left, panorama right -->
-    <article class="alt-block">
-      <div class="alt-block-text">
-        <span class="overline">Le hameau</span>
-        <h2>Au pied du Mont Pourri</h2>
-        <p>
-          Le Châtelet se trouve dans son hameau du même nom, sur la commune de Villaroger,
-          en Haute-Tarentaise. Un balcon naturel face aux sommets de l'Aiguille Rouge et du Mont Pourri.
-        </p>
-        <p>
-          On y vient pour la neige l'hiver, pour les sentiers l'été, et pour le silence
-          en toute saison.
-        </p>
+      <div class="slide active" style="background-image: url('images/le-chalet.jpg');">
+        <div class="slide-caption">
+          <span class="overline">Le Châtelet</span>
+          <h2>Notre maison de famille</h2>
+        </div>
       </div>
-      <div class="alt-block-image" style="background-image: url('images/panorama.jpg');"></div>
-    </article>
 
-    <!-- Block 2 — image left, text right -->
-    <article class="alt-block">
-      <div class="alt-block-text">
-        <span class="overline">Vue depuis Le Monal</span>
-        <h2>Le Mont Pourri</h2>
-        <p>
-          3779 mètres. Toujours là, en toile de fond. Selon l'heure et la saison, il change
-          de visage — couvert de neige fraîche en hiver, dévoilant ses arêtes de granit en été.
-        </p>
-        <p>
-          Le Monal, hameau d'alpage classé non loin de là, offre l'un des plus beaux points
-          de vue sur le massif.
-        </p>
+      <div class="slide" style="background-image: url('images/peaks-printemps.jpg');">
+        <div class="slide-caption">
+          <span class="overline">Printemps</span>
+          <h2>La neige tient encore sur les sommets</h2>
+        </div>
       </div>
-      <div class="alt-block-image" style="background-image: url('images/mont-pourri-monal.jpg');"></div>
-    </article>
 
-    <!-- Block 3 — text left, chapelle right -->
-    <article class="alt-block">
-      <div class="alt-block-text">
-        <span class="overline">Patrimoine local</span>
-        <h2>La Chapelle Saint-Michel</h2>
-        <p>
-          À deux pas du chalet, la chapelle Saint-Michel veille sur le hameau depuis des siècles.
-          Petit clocher, pierres anciennes, et la vallée qui s'ouvre derrière.
-        </p>
-        <p>
-          Un repère, et un beau prétexte pour une balade courte au lever ou au coucher du soleil.
-        </p>
+      <div class="slide" style="background-image: url('images/peaks-summer.jpg');">
+        <div class="slide-caption">
+          <span class="overline">Été</span>
+          <h2>Les arêtes de granit, à découvert</h2>
+        </div>
       </div>
-      <div class="alt-block-image" style="background-image: url('images/chapelle-st-michel.jpg');"></div>
-    </article>
 
-    <!-- Block 4 — image left, text right -->
-    <article class="alt-block">
-      <div class="alt-block-text">
-        <span class="overline">Le chalet</span>
-        <h2>Notre maison de famille</h2>
-        <p>
-          Trois niveaux, plusieurs chambres, un poêle à bois et la cuisine au centre.
-          Tout ce qu'il faut pour se retrouver — pour quelques jours ou pour quelques semaines.
-        </p>
-        <p>
-          Ce site sert à organiser les séjours entre nous : qui vient quand, qui partage avec qui,
-          et s'assurer que personne ne se croise sans le vouloir.
-        </p>
+      <div class="slide" style="background-image: url('images/peaks-sunset.jpg');">
+        <div class="slide-caption">
+          <span class="overline">Coucher de soleil</span>
+          <h2>Le ciel s'embrase au-dessus de la vallée</h2>
+        </div>
       </div>
-      <div class="alt-block-image" style="background-image: url('images/vue-chalet.jpg');"></div>
-    </article>
 
+      <div class="slide" style="background-image: url('images/peaks-winter.jpg');">
+        <div class="slide-caption">
+          <span class="overline">Hiver</span>
+          <h2>Tout devient blanc et silencieux</h2>
+        </div>
+      </div>
+
+    </div>
+
+    <button class="slideshow-nav prev" id="slide-prev" aria-label="Image précédente">‹</button>
+    <button class="slideshow-nav next" id="slide-next" aria-label="Image suivante">›</button>
+
+    <div class="slideshow-dots" id="slideshow-dots"></div>
   </section>
 
   <!-- ================= GALLERY ================= -->
@@ -195,6 +170,68 @@
 
   <script>
     document.getElementById('year').textContent = new Date().getFullYear();
+
+    /* ========== Slideshow ========== */
+    (function() {
+      const slides = document.querySelectorAll('.slide');
+      const dotsContainer = document.getElementById('slideshow-dots');
+      const btnPrev = document.getElementById('slide-prev');
+      const btnNext = document.getElementById('slide-next');
+      if (!slides.length) return;
+
+      let currentSlide = 0;
+      let autoplayTimer = null;
+      const AUTOPLAY_MS = 5500;
+
+      // Build pagination dots
+      slides.forEach((_, i) => {
+        const dot = document.createElement('button');
+        dot.className = 'slideshow-dot' + (i === 0 ? ' active' : '');
+        dot.setAttribute('aria-label', `Aller à l'image ${i + 1}`);
+        dot.addEventListener('click', () => goTo(i));
+        dotsContainer.appendChild(dot);
+      });
+      const dots = dotsContainer.querySelectorAll('.slideshow-dot');
+
+      function goTo(idx) {
+        slides[currentSlide].classList.remove('active');
+        dots[currentSlide].classList.remove('active');
+        currentSlide = (idx + slides.length) % slides.length;
+        slides[currentSlide].classList.add('active');
+        dots[currentSlide].classList.add('active');
+        resetAutoplay();
+      }
+
+      function next() { goTo(currentSlide + 1); }
+      function prev() { goTo(currentSlide - 1); }
+
+      function startAutoplay() {
+        autoplayTimer = setInterval(next, AUTOPLAY_MS);
+      }
+      function resetAutoplay() {
+        clearInterval(autoplayTimer);
+        startAutoplay();
+      }
+
+      btnPrev.addEventListener('click', prev);
+      btnNext.addEventListener('click', next);
+
+      // Pause on hover
+      const slideshow = document.querySelector('.slideshow');
+      slideshow.addEventListener('mouseenter', () => clearInterval(autoplayTimer));
+      slideshow.addEventListener('mouseleave', startAutoplay);
+
+      // Keyboard navigation when slideshow is visible
+      document.addEventListener('keydown', (e) => {
+        const rect = slideshow.getBoundingClientRect();
+        const inView = rect.top < window.innerHeight && rect.bottom > 0;
+        if (!inView) return;
+        if (e.key === 'ArrowRight') next();
+        else if (e.key === 'ArrowLeft') prev();
+      });
+
+      startAutoplay();
+    })();
 
     /* ========== Lightbox gallery ========== */
     (function() {
