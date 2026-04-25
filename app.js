@@ -14,7 +14,7 @@
         déploiement "Web App" de Google Apps Script.
    ----------------------------------------------------------------------------- */
 const CONFIG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec',
+  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwBDBX4lrlC7WqoM7ECWio_rbNDrgObed6gGTPGFXxDfTwBm648bcaEiiyrfTFiY7lg/exec',
   FAMILY_PASSWORD: 'BecRouge',
   ADMIN_PASSWORD: 'Tempete',
   ADMIN_NAME: 'Severine',           // case-insensitive, accent-insensitive
