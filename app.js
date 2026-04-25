@@ -1,26 +1,36 @@
 /* =============================================================================
    Le Châtelet — Logique frontend
-   - Authentification famille / admin
-   - Formulaire de réservation
+   - Authentification famille / admin (avec prénom)
+   - Formulaire de réservation avec chambres nommées et lits
    - Affichage calendriers (Petit + Grand)
-   - Gestion "Mes réservations" et "Toutes les demandes"
+   - Détection de partage de chambres (warnings)
    - Intégration Google Apps Script Web App
    ============================================================================= */
+
 /* -----------------------------------------------------------------------------
    CONFIGURATION
    -----------------------------------------------------------------------------
    ⚠️  REMPLACEZ la valeur de SCRIPT_URL ci-dessous par l'URL de votre
         déploiement "Web App" de Google Apps Script.
-        (Voir instructions de déploiement en fin de Code.gs)
    ----------------------------------------------------------------------------- */
 const CONFIG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwBDBX4lrlC7WqoM7ECWio_rbNDrgObed6gGTPGFXxDfTwBm648bcaEiiyrfTFiY7lg/exec',
+  SCRIPT_URL: 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec',
   FAMILY_PASSWORD: 'BecRouge',
   ADMIN_PASSWORD: 'Tempete',
+  ADMIN_NAME: 'Severine',           // case-insensitive, accent-insensitive
   STORAGE_KEY_USER: 'chatelet_user',
   STORAGE_KEY_AUTH: 'chatelet_auth',
   STORAGE_KEY_ADMIN: 'chatelet_admin',
 };
+
+/* Grand Chalet rooms — id, label, bed capacity */
+const ROOMS = [
+  { id: 'mezz_double',  name: 'Chambre Mezzanine Lit Double',         beds: 1 },
+  { id: 'mezz_simples', name: 'Chambre Mezzanine Deux Lits Simples',  beds: 2 },
+  { id: 'mezzanine',    name: 'Mezzanine',                            beds: 4 },
+  { id: 'rdc',          name: 'Chambre Rez-de-Chaussée',              beds: 1 },
+  { id: 'cave',         name: 'Chambre Cave',                         beds: 4 },
+];
 
 /* =============================================================================
    ÉTAT GLOBAL
@@ -28,7 +38,7 @@ const CONFIG = {
 const state = {
   familyAuth: false,
   adminAuth: false,
-  userName: '',
+  userName: '',                // exact display name as entered
   reservations: [],
   petitMonth: new Date(),
   grandMonth: new Date(),
@@ -44,6 +54,19 @@ const MONTH_NAMES = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
 ];
+
+/* Normalize a name for case- and accent-insensitive comparison */
+function normalizeName(s) {
+  return String(s || '')
+    .normalize('NFD')              // separate accents
+    .replace(/[\u0300-\u036f]/g, '')  // remove combining marks
+    .toLowerCase()
+    .trim();
+}
+
+function namesMatch(a, b) {
+  return normalizeName(a) === normalizeName(b);
+}
 
 function formatDateISO(date) {
   const y = date.getFullYear();
@@ -74,18 +97,47 @@ function truthy(v) {
   return false;
 }
 
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function getRoom(id) {
+  return ROOMS.find(r => r.id === id);
+}
+
+/* Parse the chambres field — supports both new JSON format and legacy text */
+function parseChambres(raw) {
+  if (!raw) return [];
+  if (typeof raw === 'object') return Array.isArray(raw) ? raw : [];
+  const s = String(raw).trim();
+  if (!s) return [];
+  if (s.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(s);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      return [];
+    }
+  }
+  // Legacy / free-text: store as-is in a single pseudo-room
+  return [{ legacy: s }];
+}
+
+function chambresToLabel(chambres) {
+  if (!chambres || !chambres.length) return '';
+  return chambres.map(c => {
+    if (c.legacy) return c.legacy;
+    const r = getRoom(c.room);
+    if (!r) return '';
+    if (r.beds === 1) return r.name;
+    return `${r.name} (${c.beds} lit${c.beds > 1 ? 's' : ''})`;
+  }).filter(Boolean).join(', ');
+}
+
 /* =============================================================================
    API — Google Apps Script Web App
-   =============================================================================
-   Convention :
-   - POST  { action: 'list' }                   → renvoie toutes les réservations
-   - POST  { action: 'create', booking: {...} } → ajoute une réservation
-   - POST  { action: 'updateStatus', id, status } → change le statut
-   - POST  { action: 'delete', id }             → supprime définitivement
-
-   Notes :
-   - On utilise text/plain pour éviter la requête CORS preflight (OPTIONS).
-   - Apps Script reçoit quand même le body brut via e.postData.contents.
    ============================================================================= */
 
 async function apiCall(payload) {
@@ -117,7 +169,7 @@ async function fetchReservations() {
     petitChalet: truthy(r.petitChalet),
     grandChalet: truthy(r.grandChalet),
     grandChaletType: r.grandChaletType || null,
-    chambres: r.chambres || null,
+    chambres: parseChambres(r.chambres),
     status: r.status || 'pending',
     requestDate: r.requestDate || '',
     phone: r.phone || '',
@@ -157,7 +209,6 @@ function showApp() {
   $('auth-section').classList.add('hidden');
   $('app-section').classList.remove('hidden');
   updateUserBar();
-  if (state.userName) $('user-name').value = state.userName;
 }
 
 function showAuth() {
@@ -169,54 +220,63 @@ function updateUserBar() {
   const greet = state.userName ? `Bonjour, ${state.userName}` : 'Connecté';
   $('user-greet').textContent = greet;
   $('admin-indicator').classList.toggle('hidden', !state.adminAuth);
-  $('admin-login-btn').textContent = state.adminAuth ? 'Désactiver admin' : 'Mode admin';
 }
 
 function setupAuthHandlers() {
-  // Famille
+  // Toggle admin password field visibility based on checkbox
+  $('admin-checkbox').addEventListener('change', (e) => {
+    const f = $('admin-password-field');
+    f.classList.toggle('hidden', !e.target.checked);
+    if (e.target.checked) {
+      $('admin-password').focus();
+    } else {
+      $('admin-password').value = '';
+    }
+  });
+
+  // Family/admin login submit
   $('family-auth-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    const pwd = $('family-password').value;
+    const name = $('login-name').value.trim();
+    const familyPwd = $('family-password').value;
+    const isAdmin = $('admin-checkbox').checked;
+    const adminPwd = $('admin-password').value;
     const msgEl = $('family-auth-msg');
-    if (pwd === CONFIG.FAMILY_PASSWORD) {
-      state.familyAuth = true;
-      sessionStorage.setItem(CONFIG.STORAGE_KEY_AUTH, 'ok');
-      showApp();
-      refreshAll();
-    } else {
-      showMsg(msgEl, 'Mot de passe incorrect.', 'error');
-    }
-  });
 
-  // Admin toggle
-  $('admin-login-btn').addEventListener('click', () => {
-    if (state.adminAuth) {
-      state.adminAuth = false;
-      sessionStorage.removeItem(CONFIG.STORAGE_KEY_ADMIN);
-      updateUserBar();
-      renderAll();
-    } else {
-      showAdminModal();
+    if (!name) {
+      showMsg(msgEl, 'Veuillez renseigner votre prénom.', 'error');
+      return;
     }
-  });
+    if (familyPwd !== CONFIG.FAMILY_PASSWORD) {
+      showMsg(msgEl, 'Mot de passe famille incorrect.', 'error');
+      return;
+    }
 
-  // Admin form
-  $('admin-auth-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const pwd = $('admin-password').value;
-    const msgEl = $('admin-auth-msg');
-    if (pwd === CONFIG.ADMIN_PASSWORD) {
+    // Admin path: name must match Severine AND admin password must be valid
+    if (isAdmin) {
+      if (!namesMatch(name, CONFIG.ADMIN_NAME)) {
+        showMsg(msgEl, `Seule ${CONFIG.ADMIN_NAME} peut se connecter en tant qu'admin.`, 'error');
+        return;
+      }
+      if (adminPwd !== CONFIG.ADMIN_PASSWORD) {
+        showMsg(msgEl, 'Mot de passe admin incorrect.', 'error');
+        return;
+      }
       state.adminAuth = true;
       sessionStorage.setItem(CONFIG.STORAGE_KEY_ADMIN, 'ok');
-      hideAdminModal();
-      updateUserBar();
-      renderAll();
     } else {
-      showMsg(msgEl, 'Mot de passe admin incorrect.', 'error');
+      state.adminAuth = false;
+      sessionStorage.removeItem(CONFIG.STORAGE_KEY_ADMIN);
     }
-  });
 
-  $('admin-modal-cancel').addEventListener('click', hideAdminModal);
+    state.familyAuth = true;
+    state.userName = name;
+    sessionStorage.setItem(CONFIG.STORAGE_KEY_AUTH, 'ok');
+    sessionStorage.setItem(CONFIG.STORAGE_KEY_USER, name);
+
+    showApp();
+    refreshAll();
+  });
 
   // Logout
   $('logout-btn').addEventListener('click', () => {
@@ -224,59 +284,97 @@ function setupAuthHandlers() {
     state.familyAuth = false;
     state.adminAuth = false;
     state.userName = '';
+    // Reset the form
+    $('login-name').value = '';
+    $('family-password').value = '';
+    $('admin-checkbox').checked = false;
+    $('admin-password').value = '';
+    $('admin-password-field').classList.add('hidden');
     showAuth();
   });
-}
-
-function showAdminModal() {
-  const modal = $('admin-modal');
-  modal.style.display = 'flex';
-  modal.classList.remove('hidden');
-  $('admin-password').value = '';
-  $('admin-password').focus();
-  $('admin-auth-msg').innerHTML = '';
-}
-
-function hideAdminModal() {
-  const modal = $('admin-modal');
-  modal.style.display = 'none';
-  modal.classList.add('hidden');
 }
 
 /* =============================================================================
    FORMULAIRE DE RÉSERVATION
    ============================================================================= */
 
+function buildRoomsList() {
+  const container = $('rooms-list');
+  if (!container) return;
+  container.innerHTML = ROOMS.map(r => {
+    const bedsOptions = Array.from({ length: r.beds }, (_, i) =>
+      `<option value="${i + 1}">${i + 1}</option>`
+    ).join('');
+    const showBeds = r.beds > 1;
+    return `
+      <div class="room-row" data-room-id="${r.id}">
+        <label class="room-row-header">
+          <input type="checkbox" data-room-check="${r.id}" />
+          <span class="room-row-name">${r.name}</span>
+          <span class="room-row-capacity">${r.beds} lit${r.beds > 1 ? 's' : ''}</span>
+        </label>
+        ${showBeds ? `
+        <div class="room-row-beds hidden" data-room-beds-wrapper="${r.id}">
+          <label for="beds-${r.id}">Lits demandés :</label>
+          <select id="beds-${r.id}" data-room-beds="${r.id}">${bedsOptions}</select>
+        </div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
 function setupBookingForm() {
+  buildRoomsList();
+
   const grandCheckbox = $('grand-chalet');
   const grandOptions = $('grand-options');
-  const chambresField = $('chambres-field');
+  const roomsSelector = $('rooms-selector');
   const radioEntier = document.querySelector('input[name="grand-type"][value="entier"]');
   const radioChambres = document.querySelector('input[name="grand-type"][value="chambres"]');
 
   // Show/hide Grand options
   grandCheckbox.addEventListener('change', () => {
     grandOptions.classList.toggle('hidden', !grandCheckbox.checked);
+    updateSharingWarning();
   });
 
-  // Show/hide chambres detail
+  // Show/hide rooms selector when "chambres" radio chosen
   [radioEntier, radioChambres].forEach(r => {
     r.addEventListener('change', () => {
-      chambresField.classList.toggle('hidden', radioChambres.checked === false);
+      roomsSelector.classList.toggle('hidden', !radioChambres.checked);
+      updateSharingWarning();
     });
+  });
+
+  // Per-room checkbox + bed-count selector wiring
+  document.querySelectorAll('[data-room-check]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const id = cb.dataset.roomCheck;
+      const row = document.querySelector(`.room-row[data-room-id="${id}"]`);
+      const bedsWrap = document.querySelector(`[data-room-beds-wrapper="${id}"]`);
+      row.classList.toggle('selected', cb.checked);
+      if (bedsWrap) bedsWrap.classList.toggle('hidden', !cb.checked);
+      updateSharingWarning();
+    });
+  });
+
+  document.querySelectorAll('[data-room-beds]').forEach(sel => {
+    sel.addEventListener('change', updateSharingWarning);
   });
 
   // Submit
   $('booking-form').addEventListener('submit', handleBookingSubmit);
 
-  // Date validation
+  // Date validation + recompute warning on date change
   $('start-date').addEventListener('change', () => {
     const sd = $('start-date').value;
     $('end-date').min = sd;
     if ($('end-date').value && $('end-date').value < sd) {
       $('end-date').value = sd;
     }
+    updateSharingWarning();
   });
+  $('end-date').addEventListener('change', updateSharingWarning);
 
   // Today min
   const todayStr = formatDateISO(new Date());
@@ -284,13 +382,161 @@ function setupBookingForm() {
   $('end-date').min = todayStr;
 }
 
+/* Read currently-selected rooms from the form */
+function getSelectedRooms() {
+  const result = [];
+  ROOMS.forEach(r => {
+    const cb = document.querySelector(`[data-room-check="${r.id}"]`);
+    if (cb && cb.checked) {
+      let beds = 1;
+      if (r.beds > 1) {
+        const sel = document.querySelector(`[data-room-beds="${r.id}"]`);
+        beds = sel ? parseInt(sel.value, 10) : 1;
+      }
+      result.push({ room: r.id, beds });
+    }
+  });
+  return result;
+}
+
+/* =============================================================================
+   DÉTECTION DE PARTAGE / CONFLIT DE CHAMBRES
+   ============================================================================= */
+
+/* Two date ranges overlap if startA <= endB && startB <= endA (inclusive) */
+function rangesOverlap(s1, e1, s2, e2) {
+  if (!s1 || !e1 || !s2 || !e2) return false;
+  return s1 <= e2 && s2 <= e1;
+}
+
+/* Build a map: room id → array of {beds, by, status, range} for reservations
+   that overlap the given date range and book that room */
+function getRoomOccupancy(startDate, endDate) {
+  const occupancy = {};
+  ROOMS.forEach(r => { occupancy[r.id] = []; });
+
+  state.reservations.forEach(res => {
+    if (res.status === 'cancelled' || res.status === 'denied') return;
+    if (!res.grandChalet) return;
+    if (!rangesOverlap(startDate, endDate, res.startDate, res.endDate)) return;
+
+    if (res.grandChaletType === 'entier') {
+      // Entire chalet — occupies all rooms fully
+      ROOMS.forEach(r => {
+        occupancy[r.id].push({
+          beds: r.beds,
+          by: res.userName,
+          status: res.status,
+          entire: true,
+        });
+      });
+    } else if (res.grandChaletType === 'chambres') {
+      (res.chambres || []).forEach(c => {
+        if (!c.room) return;
+        if (occupancy[c.room]) {
+          occupancy[c.room].push({
+            beds: c.beds || 1,
+            by: res.userName,
+            status: res.status,
+            entire: false,
+          });
+        }
+      });
+    }
+  });
+  return occupancy;
+}
+
+/* Compute warnings for the current form state */
+function computeSharingInfo() {
+  const startDate = $('start-date').value;
+  const endDate = $('end-date').value;
+  const grand = $('grand-chalet').checked;
+  const grandType = document.querySelector('input[name="grand-type"]:checked')?.value;
+
+  if (!grand || grandType !== 'chambres' || !startDate || !endDate) {
+    return { warnings: [], hasOverbook: false };
+  }
+
+  const selected = getSelectedRooms();
+  if (!selected.length) return { warnings: [], hasOverbook: false };
+
+  const occupancy = getRoomOccupancy(startDate, endDate);
+  const warnings = [];
+  let hasOverbook = false;
+
+  selected.forEach(sel => {
+    const room = getRoom(sel.room);
+    if (!room) return;
+    const others = occupancy[room.id] || [];
+    if (!others.length) return;
+
+    const totalUsed = others.reduce((sum, o) => sum + o.beds, 0);
+    const wouldUse = totalUsed + sel.beds;
+
+    // If anyone has the entire chalet, that's a hard conflict
+    if (others.some(o => o.entire)) {
+      const who = others.filter(o => o.entire).map(o => o.by).join(', ');
+      warnings.push({
+        room: room.name,
+        kind: 'entire',
+        message: `${room.name} : ${who} a réservé le chalet entier sur ces dates.`,
+      });
+      hasOverbook = true;
+      return;
+    }
+
+    if (wouldUse > room.beds) {
+      hasOverbook = true;
+      const namesList = others.map(o => `${o.by} (${o.beds} lit${o.beds > 1 ? 's' : ''})`).join(', ');
+      warnings.push({
+        room: room.name,
+        kind: 'overbook',
+        message: `${room.name} : surréservation. ${namesList} occupent déjà ${totalUsed}/${room.beds} lits, vous demandez ${sel.beds} de plus.`,
+      });
+    } else {
+      const namesList = others.map(o => `${o.by} (${o.beds} lit${o.beds > 1 ? 's' : ''})`).join(', ');
+      warnings.push({
+        room: room.name,
+        kind: 'share',
+        message: `${room.name} : partagée avec ${namesList}.`,
+      });
+    }
+  });
+
+  return { warnings, hasOverbook };
+}
+
+function updateSharingWarning() {
+  const el = $('sharing-warning');
+  if (!el) return;
+  const info = computeSharingInfo();
+  if (!info.warnings.length) {
+    el.classList.add('hidden');
+    el.innerHTML = '';
+    return;
+  }
+  const title = info.hasOverbook
+    ? '⚠ Attention — conflit ou surréservation'
+    : 'ⓘ Cette demande implique un partage de chambre';
+  el.innerHTML = `
+    <strong>${title}</strong>
+    <ul>${info.warnings.map(w => `<li>${escapeHtml(w.message)}</li>`).join('')}</ul>
+  `;
+  el.classList.remove('hidden');
+}
+
+/* =============================================================================
+   SUBMIT
+   ============================================================================= */
+
 async function handleBookingSubmit(e) {
   e.preventDefault();
 
   const msgEl = $('booking-msg');
   const submitBtn = $('submit-booking-btn');
 
-  const userName = $('user-name').value.trim();
+  const userName = state.userName; // from session
   const email = $('user-email').value.trim();
   const startDate = $('start-date').value;
   const endDate = $('end-date').value;
@@ -300,7 +546,7 @@ async function handleBookingSubmit(e) {
   const grand = $('grand-chalet').checked;
 
   // Validation
-  if (!userName || !email || !startDate || !endDate || !numPeople) {
+  if (!email || !startDate || !endDate || !numPeople) {
     showMsg(msgEl, 'Veuillez remplir tous les champs obligatoires.', 'error');
     return;
   }
@@ -314,15 +560,28 @@ async function handleBookingSubmit(e) {
   }
 
   let grandType = null;
-  let chambres = null;
+  let chambres = [];
   if (grand) {
     grandType = document.querySelector('input[name="grand-type"]:checked').value;
     if (grandType === 'chambres') {
-      chambres = $('chambres').value.trim();
-      if (!chambres) {
-        showMsg(msgEl, 'Précisez les chambres souhaitées.', 'error');
+      chambres = getSelectedRooms();
+      if (!chambres.length) {
+        showMsg(msgEl, 'Sélectionnez au moins une chambre.', 'error');
         return;
       }
+    }
+  }
+
+  // If there's a sharing/overbook warning, ask for confirmation but allow submission
+  if (grand && grandType === 'chambres') {
+    const info = computeSharingInfo();
+    if (info.hasOverbook) {
+      const ok = confirm(
+        'Attention : votre demande implique une surréservation ou un conflit.\n\n' +
+        info.warnings.map(w => '— ' + w.message).join('\n') +
+        '\n\nVous pouvez continuer ; un administrateur examinera la demande. Confirmer ?'
+      );
+      if (!ok) return;
     }
   }
 
@@ -336,7 +595,7 @@ async function handleBookingSubmit(e) {
     petitChalet: petit,
     grandChalet: grand,
     grandChaletType: grandType,
-    chambres,
+    chambres: JSON.stringify(chambres), // store as JSON string
     status: 'pending',
     requestDate: new Date().toISOString(),
   };
@@ -347,13 +606,14 @@ async function handleBookingSubmit(e) {
 
   try {
     await createReservation(booking);
-    state.userName = userName;
-    sessionStorage.setItem(CONFIG.STORAGE_KEY_USER, userName);
     showMsg(msgEl, 'Demande envoyée ! Vous recevrez un email de confirmation après approbation.', 'success');
+    // Reset form but keep email if user wants to re-book
     $('booking-form').reset();
-    $('user-name').value = userName; // keep name
     $('grand-options').classList.add('hidden');
-    $('chambres-field').classList.add('hidden');
+    $('rooms-selector').classList.add('hidden');
+    document.querySelectorAll('.room-row').forEach(r => r.classList.remove('selected'));
+    document.querySelectorAll('[data-room-beds-wrapper]').forEach(w => w.classList.add('hidden'));
+    $('sharing-warning').classList.add('hidden');
     await refreshAll();
   } catch (err) {
     showMsg(msgEl, `Erreur : ${err.message}`, 'error');
@@ -370,8 +630,8 @@ async function handleBookingSubmit(e) {
 function setupCalendarNav() {
   $$('[data-nav]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const cal = btn.dataset.cal; // 'petit' or 'grand'
-      const dir = btn.dataset.nav; // 'prev' or 'next'
+      const cal = btn.dataset.cal;
+      const dir = btn.dataset.nav;
       const key = cal === 'petit' ? 'petitMonth' : 'grandMonth';
       const d = new Date(state[key]);
       d.setMonth(d.getMonth() + (dir === 'next' ? 1 : -1));
@@ -382,7 +642,6 @@ function setupCalendarNav() {
 }
 
 function reservationsOverlappingDay(dayDate, chaletFilter) {
-  // chaletFilter: 'petit' or 'grand'
   return state.reservations.filter(r => {
     if (r.status === 'cancelled' || r.status === 'denied') return false;
     if (chaletFilter === 'petit' && !r.petitChalet) return false;
@@ -408,7 +667,6 @@ function renderCalendar(which) {
 
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
-  // Monday start: 0=Monday ... 6=Sunday
   let firstDow = (firstDay.getDay() + 6) % 7;
   const daysInMonth = lastDay.getDate();
 
@@ -416,11 +674,7 @@ function renderCalendar(which) {
   today.setHours(0, 0, 0, 0);
 
   let html = '';
-
-  // empty slots before first
-  for (let i = 0; i < firstDow; i++) {
-    html += '<div class="calendar-day empty"></div>';
-  }
+  for (let i = 0; i < firstDow; i++) html += '<div class="calendar-day empty"></div>';
 
   for (let day = 1; day <= daysInMonth; day++) {
     const dayDate = new Date(year, month, day);
@@ -432,7 +686,6 @@ function renderCalendar(which) {
     if (reservations.some(r => r.status === 'approved')) cls += ' approved';
     else if (reservations.some(r => r.status === 'pending')) cls += ' pending';
 
-    // Pills — max 3, then "+X"
     const pills = reservations.slice(0, 3).map(r => {
       const pCls = r.status === 'pending' ? 'res-pill pending' : 'res-pill';
       const tip = buildTooltip(r, which);
@@ -455,19 +708,17 @@ function renderCalendar(which) {
 
 function buildTooltip(r, which) {
   const parts = [r.userName, `${r.numPeople} pers.`];
-  if (which === 'grand' && r.grandChaletType === 'chambres' && r.chambres) {
-    parts.push(r.chambres);
-  } else if (which === 'grand' && r.grandChaletType === 'entier') {
-    parts.push('(Entier)');
+  if (which === 'grand') {
+    if (r.grandChaletType === 'entier') {
+      parts.push('Chalet entier');
+    } else if (r.grandChaletType === 'chambres') {
+      const lbl = chambresToLabel(r.chambres);
+      if (lbl) parts.push(`Chambres seulement : ${lbl}`);
+      else parts.push('Chambres seulement');
+    }
   }
   parts.push(`${formatDateHuman(r.startDate)} → ${formatDateHuman(r.endDate)}`);
   return escapeHtml(parts.join(' · '));
-}
-
-function escapeHtml(s) {
-  return String(s || '').replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
 }
 
 /* =============================================================================
@@ -477,11 +728,11 @@ function escapeHtml(s) {
 function renderMyReservations() {
   const container = $('my-reservations-container');
   const mine = state.reservations.filter(r =>
-    r.userName.toLowerCase() === state.userName.toLowerCase() && state.userName
+    state.userName && namesMatch(r.userName, state.userName)
   );
 
   if (!state.userName) {
-    container.innerHTML = '<div class="empty-state">Envoyez votre première demande pour voir vos réservations ici.</div>';
+    container.innerHTML = '<div class="empty-state">Connectez-vous pour voir vos réservations.</div>';
     return;
   }
 
@@ -497,7 +748,6 @@ function renderMyReservations() {
 function renderAllReservations() {
   const container = $('all-reservations-container');
   const all = [...state.reservations].sort((a, b) => {
-    // Sort: pending first, then by start date asc
     if (a.status === 'pending' && b.status !== 'pending') return -1;
     if (a.status !== 'pending' && b.status === 'pending') return 1;
     return (a.startDate || '').localeCompare(b.startDate || '');
@@ -518,8 +768,12 @@ function renderReservationsTable(list, opts = {}) {
     if (r.petitChalet) chalets.push('<span class="chalet-tag">Petit</span>');
     if (r.grandChalet) {
       let label = 'Grand';
-      if (r.grandChaletType === 'chambres' && r.chambres) label += ` (${escapeHtml(r.chambres)})`;
-      else if (r.grandChaletType === 'entier') label += ' (Entier)';
+      if (r.grandChaletType === 'entier') {
+        label += ' (Entier)';
+      } else if (r.grandChaletType === 'chambres') {
+        const lbl = chambresToLabel(r.chambres);
+        label += lbl ? ` (${escapeHtml(lbl)})` : ' (Chambres)';
+      }
       chalets.push(`<span class="chalet-tag">${label}</span>`);
     }
 
@@ -530,7 +784,6 @@ function renderReservationsTable(list, opts = {}) {
       cancelled: 'Annulée',
     }[r.status] || r.status;
 
-    // Actions
     const actions = [];
     if (opts.showAdmin && r.status === 'pending') {
       actions.push(`<button class="btn btn-sm btn-approve" data-action="approve" data-id="${r.id}">Approuver</button>`);
@@ -539,8 +792,12 @@ function renderReservationsTable(list, opts = {}) {
     if (opts.showAdmin) {
       actions.push(`<button class="btn btn-sm btn-delete" data-action="delete" data-id="${r.id}">Effacer</button>`);
     }
+    // Owner-cancel: only on "Mes réservations" panel, only for pending/approved
     if (opts.showOwnerCancel && (r.status === 'pending' || r.status === 'approved')) {
-      actions.push(`<button class="btn btn-sm btn-cancel" data-action="cancel" data-id="${r.id}">Annuler</button>`);
+      // Extra safety check: must be owner
+      if (namesMatch(r.userName, state.userName)) {
+        actions.push(`<button class="btn btn-sm btn-cancel" data-action="cancel" data-id="${r.id}">Annuler</button>`);
+      }
     }
 
     return `
@@ -559,12 +816,8 @@ function renderReservationsTable(list, opts = {}) {
     <table class="res-table">
       <thead>
         <tr>
-          <th>Nom</th>
-          <th>Dates</th>
-          <th>Pers.</th>
-          <th>Chalet(s)</th>
-          <th>Statut</th>
-          <th>Actions</th>
+          <th>Nom</th><th>Dates</th><th>Pers.</th>
+          <th>Chalet(s)</th><th>Statut</th><th>Actions</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -591,6 +844,15 @@ async function handleTableAction(action, id, btn) {
   };
   if (!confirm(confirmMsgs[action])) return;
 
+  // Extra safety: cancel only if owner (or admin)
+  if (action === 'cancel') {
+    const res = state.reservations.find(r => r.id === id);
+    if (res && !state.adminAuth && !namesMatch(res.userName, state.userName)) {
+      alert('Vous ne pouvez annuler que vos propres réservations.');
+      return;
+    }
+  }
+
   btn.disabled = true;
   const originalText = btn.textContent;
   btn.textContent = '...';
@@ -609,7 +871,7 @@ async function handleTableAction(action, id, btn) {
 }
 
 /* =============================================================================
-   RAFRAÎCHISSEMENT & RENDU
+   RAFRAÎCHISSEMENT
    ============================================================================= */
 
 async function refreshAll() {
@@ -629,10 +891,11 @@ function renderAll() {
   renderCalendar('grand');
   renderMyReservations();
   renderAllReservations();
+  updateSharingWarning();
 }
 
 /* =============================================================================
-   INITIALISATION
+   INIT
    ============================================================================= */
 
 document.addEventListener('DOMContentLoaded', () => {

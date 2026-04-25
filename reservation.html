@@ -33,7 +33,7 @@
     </div>
   </header>
 
-  <!-- ================= AUTH (family password) ================= -->
+  <!-- ================= AUTH (family password + name + admin checkbox) ================= -->
   <section id="auth-section" class="booking-section">
     <div class="auth-panel">
       <div class="lock-icon">
@@ -43,13 +43,31 @@
         </svg>
       </div>
       <h2>Accès famille</h2>
-      <p>Entrez le mot de passe famille pour accéder au calendrier.</p>
+      <p>Renseignez votre prénom et le mot de passe famille pour accéder au calendrier.</p>
       <form id="family-auth-form">
         <div class="field">
-          <label for="family-password">Mot de passe</label>
+          <label for="login-name">Votre prénom</label>
+          <input type="text" id="login-name" required autocomplete="given-name" />
+          <p class="field-hint">⚠ Utilisez exactement le même prénom à chaque connexion (avec ou sans accents) pour retrouver vos réservations.</p>
+        </div>
+        <div class="field">
+          <label for="family-password">Mot de passe famille</label>
           <input type="password" id="family-password" required autocomplete="current-password" />
         </div>
-        <button type="submit" class="btn btn-primary" style="width: 100%;">Accéder</button>
+
+        <div class="field" style="margin-top: 1.25rem;">
+          <label class="checkbox-label" style="cursor: pointer;">
+            <input type="checkbox" id="admin-checkbox" />
+            <span>Je me connecte en tant qu'admin</span>
+          </label>
+        </div>
+
+        <div id="admin-password-field" class="field hidden">
+          <label for="admin-password">Mot de passe admin</label>
+          <input type="password" id="admin-password" autocomplete="current-password" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">Accéder</button>
         <div id="family-auth-msg"></div>
       </form>
     </div>
@@ -64,10 +82,7 @@
         <span id="user-greet">Connecté</span>
         <span id="admin-indicator" class="admin-badge hidden">Admin</span>
       </div>
-      <div style="display:flex; gap: 0.5rem;">
-        <button id="admin-login-btn" class="btn btn-ghost btn-sm">Mode admin</button>
-        <button id="logout-btn" class="btn btn-secondary btn-sm">Déconnexion</button>
-      </div>
+      <button id="logout-btn" class="btn btn-secondary btn-sm">Déconnexion</button>
     </div>
 
     <!-- BOOKING FORM -->
@@ -78,12 +93,12 @@
       <form id="booking-form">
         <div class="field-row">
           <div class="field">
-            <label for="user-name">Votre nom</label>
-            <input type="text" id="user-name" required />
-          </div>
-          <div class="field">
             <label for="user-email">Email de confirmation</label>
             <input type="email" id="user-email" required />
+          </div>
+          <div class="field">
+            <label for="user-phone">Téléphone <span style="color: var(--muted); font-weight: 400;">(optionnel)</span></label>
+            <input type="tel" id="user-phone" />
           </div>
         </div>
 
@@ -98,15 +113,9 @@
           </div>
         </div>
 
-        <div class="field-row">
-          <div class="field">
-            <label for="num-people">Nombre de personnes</label>
-            <input type="number" id="num-people" min="1" max="16" required />
-          </div>
-          <div class="field">
-            <label for="user-phone">Téléphone <span style="color: var(--muted); font-weight: 400;">(optionnel)</span></label>
-            <input type="tel" id="user-phone" />
-          </div>
+        <div class="field">
+          <label for="num-people">Nombre de personnes</label>
+          <input type="number" id="num-people" min="1" max="16" required />
         </div>
 
         <div class="field">
@@ -114,11 +123,11 @@
           <div class="checkbox-group">
             <label class="checkbox-label">
               <input type="checkbox" id="petit-chalet" />
-              <span><strong>Petit Châtelet</strong> — 4 personnes max</span>
+              <span><strong>Petit Châtelet</strong> — 4 personnes, 2 chambres</span>
             </label>
             <label class="checkbox-label">
               <input type="checkbox" id="grand-chalet" />
-              <span><strong>Grand Châtelet</strong> — 12 personnes, 4 chambres, 1 Mezzanine</span>
+              <span><strong>Grand Châtelet</strong> — 12 personnes, 5 chambres</span>
             </label>
           </div>
         </div>
@@ -136,9 +145,16 @@
               <span>Chambres seulement</span>
             </label>
           </div>
-          <div id="chambres-field" class="field hidden" style="margin-top: 1rem;">
-            <label for="chambres">Précisez les chambres</label>
-            <input type="text" id="chambres" placeholder="Ex : Chambres 1, 2 et 4" />
+
+          <!-- Per-room selectors (shown when "chambres" radio is selected) -->
+          <div id="rooms-selector" class="rooms-selector hidden">
+            <p class="field-hint" style="margin-bottom: 0.85rem;">Sélectionnez les chambres souhaitées et le nombre de lits par chambre.</p>
+
+            <!-- Rooms are built dynamically by app.js to keep them in sync with ROOMS config -->
+            <div id="rooms-list"></div>
+
+            <!-- Sharing warning, shown live when overlap detected -->
+            <div id="sharing-warning" class="sharing-warning hidden"></div>
           </div>
         </div>
 
@@ -217,31 +233,6 @@
       </div>
     </div>
   </section>
-
-  <!-- ================= ADMIN PASSWORD MODAL ================= -->
-  <div id="admin-modal" class="hidden" style="position:fixed; inset:0; background:rgba(47,62,70,0.6); backdrop-filter:blur(4px); z-index:200; display:none; align-items:center; justify-content:center; padding:1rem;">
-    <div class="auth-panel" style="margin:0; max-width: 420px;">
-      <div class="lock-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 15v2m-6 4h12a2 2 0 002-2v-7a2 2 0 00-2-2H6a2 2 0 00-2 2v7a2 2 0 002 2z"/>
-          <path d="M8 11V7a4 4 0 118 0v4"/>
-        </svg>
-      </div>
-      <h2>Mode administrateur</h2>
-      <p>Entrez le mot de passe admin pour gérer les réservations.</p>
-      <form id="admin-auth-form">
-        <div class="field">
-          <label for="admin-password">Mot de passe admin</label>
-          <input type="password" id="admin-password" required />
-        </div>
-        <div style="display:flex; gap:0.5rem;">
-          <button type="submit" class="btn btn-primary" style="flex:1;">Activer</button>
-          <button type="button" id="admin-modal-cancel" class="btn btn-secondary">Annuler</button>
-        </div>
-        <div id="admin-auth-msg"></div>
-      </form>
-    </div>
-  </div>
 
   <!-- ================= FOOTER ================= -->
   <footer class="footer">

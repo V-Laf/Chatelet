@@ -1638,6 +1638,114 @@ h1, h2, h3, h4 {
 
 .hidden { display: none !important; }
 
+.field-hint {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 0.4rem;
+  line-height: 1.5;
+}
+
+/* Per-room selector for Grand Chalet "chambres seulement" */
+.rooms-selector {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  background: var(--cream);
+  border: 1px solid var(--stone-pale);
+  border-radius: var(--radius);
+}
+
+.room-row {
+  padding: 0.85rem 1rem;
+  background: var(--white);
+  border: 1px solid var(--stone-pale);
+  border-radius: var(--radius);
+  margin-bottom: 0.6rem;
+  transition: all var(--transition);
+}
+
+.room-row:last-child { margin-bottom: 0; }
+
+.room-row.selected {
+  border-color: var(--earth);
+  background: var(--stone-pale);
+}
+
+.room-row-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+}
+
+.room-row-header input[type="checkbox"] {
+  accent-color: var(--earth);
+  width: 16px;
+  height: 16px;
+}
+
+.room-row-name {
+  flex: 1;
+  font-weight: 500;
+  color: var(--slate-dark);
+  font-size: 0.95rem;
+}
+
+.room-row-capacity {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.room-row-beds {
+  margin-top: 0.75rem;
+  padding-left: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.room-row-beds.hidden { display: none; }
+
+.room-row-beds label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.room-row-beds select {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--stone);
+  border-radius: var(--radius);
+  background: var(--white);
+  font-size: 0.9rem;
+  min-width: 70px;
+}
+
+.sharing-warning {
+  margin-top: 1rem;
+  padding: 0.95rem 1.1rem;
+  background: var(--status-pending-bg);
+  border-left: 3px solid var(--status-pending);
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  color: #6f5724;
+  line-height: 1.6;
+}
+
+.sharing-warning strong {
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.sharing-warning ul {
+  margin: 0.4rem 0 0 1.2rem;
+  padding: 0;
+}
+
+.sharing-warning li {
+  margin-bottom: 0.25rem;
+}
+
 .msg {
   padding: 0.85rem 1rem;
   border-radius: var(--radius);
