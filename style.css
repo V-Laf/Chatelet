@@ -1924,6 +1924,12 @@ h1, h2, h3, h4 {
   background: var(--status-approved-bg);
 }
 
+/* Deeper green for "Grand Chalet entier" approved bookings — visually distinct
+   from "chambres seulement" so people can tell the chalet is fully booked */
+.calendar-day.approved-entire {
+  background: #B8CDA8;  /* deeper, more saturated green */
+}
+
 .calendar-day.pending {
   background: var(--status-pending-bg);
 }
@@ -1988,6 +1994,7 @@ h1, h2, h3, h4 {
   border-radius: 3px;
   background: var(--status-approved-bg);
 }
+.legend-swatch.entire::before { background: #B8CDA8; }
 .legend-swatch.pending::before { background: var(--status-pending-bg); }
 .legend-swatch.today::before {
   background: transparent;

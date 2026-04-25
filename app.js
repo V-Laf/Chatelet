@@ -14,7 +14,7 @@
         déploiement "Web App" de Google Apps Script.
    ----------------------------------------------------------------------------- */
 const CONFIG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwBDBX4lrlC7WqoM7ECWio_rbNDrgObed6gGTPGFXxDfTwBm648bcaEiiyrfTFiY7lg/exec',
+  SCRIPT_URL: 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec',
   FAMILY_PASSWORD: 'BecRouge',
   ADMIN_PASSWORD: 'Tempete',
   ADMIN_NAME: 'Severine',           // case-insensitive, accent-insensitive
@@ -683,7 +683,13 @@ function renderCalendar(which) {
 
     let cls = 'calendar-day';
     if (dayDate.getTime() === today.getTime()) cls += ' today';
-    if (reservations.some(r => r.status === 'approved')) cls += ' approved';
+
+    // Deeper green when an APPROVED "Grand Chalet entier" overlaps (Grand only)
+    const hasApprovedEntire = which === 'grand'
+      && reservations.some(r => r.status === 'approved' && r.grandChaletType === 'entier');
+
+    if (hasApprovedEntire) cls += ' approved approved-entire';
+    else if (reservations.some(r => r.status === 'approved')) cls += ' approved';
     else if (reservations.some(r => r.status === 'pending')) cls += ' pending';
 
     const pills = reservations.slice(0, 3).map(r => {
@@ -695,8 +701,11 @@ function renderCalendar(which) {
       ? `<span class="res-more">+${reservations.length - 3}</span>`
       : '';
 
+    // Day-level tooltip — shows ALL reservations on that day, including room details
+    const dayTip = buildDayTooltip(reservations, which);
+
     html += `
-      <div class="${cls}">
+      <div class="${cls}"${dayTip ? ` title="${dayTip}"` : ''}>
         <span class="day-number">${day}</span>
         <div class="day-reservations">${pills}${more}</div>
       </div>
@@ -704,6 +713,25 @@ function renderCalendar(which) {
   }
 
   container.innerHTML = html;
+}
+
+/* Build a tooltip listing all reservations on a given day, with room details */
+function buildDayTooltip(reservations, which) {
+  if (!reservations.length) return '';
+  const lines = reservations.map(r => {
+    let line = `${r.userName} (${r.numPeople} pers.)`;
+    if (which === 'grand') {
+      if (r.grandChaletType === 'entier') {
+        line += ' — Chalet entier';
+      } else if (r.grandChaletType === 'chambres') {
+        const lbl = chambresToLabel(r.chambres);
+        line += lbl ? ` — Chambres : ${lbl}` : ' — Chambres seulement';
+      }
+    }
+    if (r.status === 'pending') line += ' [en attente]';
+    return line;
+  });
+  return escapeHtml(lines.join('\n'));
 }
 
 function buildTooltip(r, which) {
